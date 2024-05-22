@@ -42,8 +42,9 @@ function loadFile(e) {
     const reader = new FileReader();
     reader.addEventListener("load", (e) => {
         let result = JSON.parse(e.target.result);
-        console.log(result);
         boids = result;
+        idx=0;
+        drawAll();
     })
     reader.readAsText(e.target.files[0]);
 }
@@ -75,6 +76,17 @@ function drawBoid(ctx, boid) {
     }
 }
 
+function drawAll() {
+    // Clear the canvas and redraw all the boids in their current positions
+    const ctx = document.getElementById("boids").getContext("2d");
+    ctx.clearRect(0, 0, width, height);
+    for (let boid of boids[idx].state) {
+        drawBoid(ctx, boid);
+    }
+
+    document.getElementById("timeTxt").innerText = boids[idx].t
+}
+
 const fps = 30;
 let then = Date.now();
 
@@ -86,14 +98,7 @@ function animationLoop() {
     if (isRunning && elapsed > 1000/fps) {
         then = now
 
-        // Clear the canvas and redraw all the boids in their current positions
-        const ctx = document.getElementById("boids").getContext("2d");
-        ctx.clearRect(0, 0, width, height);
-        for (let boid of boids[idx].state) {
-            drawBoid(ctx, boid);
-        }
-
-        document.getElementById("timeTxt").innerText = boids[idx].t
+        drawAll();
     
         idx++;
         if (idx >= boids.length) {
@@ -114,4 +119,5 @@ window.onload = () => {
     window.requestAnimationFrame(animationLoop);
     document.getElementById("startBtn").addEventListener("click", () => {isRunning = !isRunning});  
     document.getElementById("simDataInput").addEventListener("change", (e) => {loadFile(e)})
+    document.getElementById("resetBtn").addEventListener("click", () => {idx=0; drawAll();});
 };
