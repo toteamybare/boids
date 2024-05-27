@@ -1,22 +1,14 @@
-import {runSim} from "./simulator_modified.js"
-import { download } from "./util.js";
-
-let width = 1000;
-let height = 1000;
-const numBoids = 1000;
-const visualRange = 75;
-
-var boids = [];
-
-function initBoids() {
+function initBoids(numBoids, width, height) {
+    let boids = [];
     for (var i = 0; i < numBoids; i += 1) {
-        boids[boids.length] = {
+        boids[i] = {
             x: Math.random() * width,
             y: Math.random() * height,
             vx: Math.random() * 2 - 1,
             vy: Math.random() * 2 - 1,
         };
     }
+    return boids
 }
 
 function distance(boid1, boid2) {
@@ -26,7 +18,7 @@ function distance(boid1, boid2) {
     );
 }
 
-function keepWithinBounds(boid) {
+function keepWithinBounds(boid, width, height) {
     const margin = 200;
     const turnFactor = 1;
     if (boid.x < margin) {
@@ -43,7 +35,7 @@ function keepWithinBounds(boid) {
     }
 }
 
-function flyTowardsCenter(boid) {
+function flyTowardsCenter(boid, boids, visualRange) {
     const centeringFactor = 0.005;
     let centerX = 0;
     let centerY = 0;
@@ -63,8 +55,7 @@ function flyTowardsCenter(boid) {
     }
 }
 
-function avoidOthers(boid) {
-    const minDistance = 20;
+function avoidOthers(boid, boids, minDistance) {
     const avoidFactor = 0.05;
     let moveX = 0;
     let moveY = 0;
@@ -80,7 +71,7 @@ function avoidOthers(boid) {
     boid.vy += moveY * avoidFactor;
 }
 
-function matchVelocity(boid) {
+function matchVelocity(boid, boids, visualRange) {
     const matchingFactor = 0.05;
     let avgDX = 0;
     let avgDY = 0;
@@ -95,8 +86,8 @@ function matchVelocity(boid) {
     if (numNeighbors) {
         avgDX = avgDX / numNeighbors;
         avgDY = avgDY / numNeighbors;
-        boid.vx += (avgDX-boid.vx) * matchingFactor;
-        boid.vy += (avgDY-boid.vy) * matchingFactor;
+        boid.vx += avgDX * matchingFactor;
+        boid.vy += avgDY * matchingFactor;
     }
 }
 
@@ -109,36 +100,30 @@ function limitSpeed(boid) {
     }
 }
 
-function run() {
-    let result = [];
-    initBoids();
-    result.push({t:0, state: JSON.parse(JSON.stringify(boids))});
+export const runSim = function run() {
+    let width = 1000;
+    let height = 1000;
+    const numBoids = 1000;
+    let history = [];
+    let boids = initBoids(numBoids, width, height);
+    history.push({t:0, state: JSON.parse(JSON.stringify(boids))});
     let tMax = 1000;
     const start = performance.now();
     for (let t = 1; t<tMax; t++) {
+        let last = history.slice(-1)[0].state;
         for (let boid of boids) {
-            flyTowardsCenter(boid);
-            avoidOthers(boid);
-            matchVelocity(boid);
+            flyTowardsCenter(boid, last, 75);
+            avoidOthers(boid, last, 20);
+            matchVelocity(boid, last, 75);
             limitSpeed(boid);
-            keepWithinBounds(boid);
+            keepWithinBounds(boid, width, height);
             boid.x += boid.vx;
             boid.y += boid.vy;
         }
-        result.push({t:t, state: JSON.parse(JSON.stringify(boids))});
+        history.push({t:t, state: JSON.parse(JSON.stringify(boids))});
     }
     const end = performance.now();
     console.log(end-start);
-    console.log(result);
-    return result;
-}
-
-window.onload = () => {
-    document.getElementById("simBtn").addEventListener("click", () => {
-        download(run());
-    });
-    
-    document.getElementById("simBtn2").addEventListener("click", () => {
-        download(runSim());
-    });
+    console.log(history);
+    return history;
 }

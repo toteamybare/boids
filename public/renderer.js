@@ -1,11 +1,8 @@
 // Size of canvas. These get updated to fill the whole browser.
-let width = 500;
-let height = 500;
+let width = 1000;
+let height = 1000;
 let isRunning = false;
 let idx = 0;
-
-const numBoids = 100;
-const visualRange = 75;
 
 var boids = [{
     t: 0,
@@ -92,8 +89,8 @@ let then = Date.now();
 
 // Main animation loop
 function animationLoop() {
-    now = Date.now();
-    elapsed = now - then
+    let now = Date.now();
+    let elapsed = now - then
 
     if (isRunning && elapsed > 1000/fps) {
         then = now
