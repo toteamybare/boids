@@ -1,5 +1,6 @@
-import {runSim} from "./simulator_modified.js"
+import {runSim as runSimControl} from "./simulator_control.js"
 import { download } from "./util.js";
+import {test} from "./simulator_monoid.js"
 
 let width = 1000;
 let height = 1000;
@@ -139,6 +140,10 @@ window.onload = () => {
     });
     
     document.getElementById("simBtn2").addEventListener("click", () => {
-        download(runSim());
+        download(runSimControl());
+    });
+
+    document.getElementById("testBtn").addEventListener("click", () => {
+        test();
     });
 }
