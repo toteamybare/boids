@@ -109,16 +109,107 @@ function runBoidsSimulation(initialBoids, visualRange, minDistance, margin, widt
 }
 
 export const runSim = function run(initialBoids, option) {
-    return runBoidsSimulation(
-        initialBoids,
-        option.visualRange,
-        option.minDistance,
-        option.margin,
-        option.width,
-        option.height,
-        option.maxSpeed,
-        option.weights,
-        option.tMax,
-        option.dt
-    )
+    if (!option.useBucket){
+        return runBoidsSimulation(
+            initialBoids,
+            option.visualRange,
+            option.minDistance,
+            option.margin,
+            option.width,
+            option.height,
+            option.maxSpeed,
+            option.weights,
+            option.tMax,
+            option.dt
+        )
+    } else {
+        return runBoidsSimulationWithBucket(
+            initialBoids,
+            option.visualRange,
+            option.minDistance,
+            option.margin,
+            option.width,
+            option.height,
+            option.maxSpeed,
+            option.weights,
+            option.tMax,
+            option.dt
+        )
+    }
+}
+
+function regionHashForVec2(cellWidth, cellHeight) {
+    return (vec) => {
+        const xi = Math.floor(vec.x/cellWidth)
+        const yi = Math.floor(vec.y/cellHeight)
+        return [xi, yi]
+    }
+}
+
+function boidsToRegions(boids, cellWidth, cellHeight) {
+    const hash = regionHashForVec2(cellWidth, cellHeight)
+    let regions = {}
+
+    boids.forEach((boid) => {
+        let [xi, yi] = hash(boid.position)
+        if (regions[xi] === undefined) {
+            regions[xi] = {}
+        }
+        if (regions[xi][yi] === undefined){
+            regions[xi][yi] = []
+        }
+        regions[xi][yi].push(boid)
+    })
+
+    return regions
+}
+
+function eightNeighbors (x, y) {
+    return [[x-1, y-1], [x, y-1], [x+1, y-1], 
+        [x-1, y], [x, y], [x+1, y], 
+        [x-1, y+1], [x, y+1], [x+1, y+1]
+    ]
+}
+
+function getPossibleNeighbors (boid, regions, cellWidth, cellHeight) {
+    const [xi, yi] = regionHashForVec2(cellWidth, cellHeight)(boid.position)
+    let neighborBoids = []
+    eightNeighbors(xi, yi).forEach((cell) => {
+        const regionsX = regions[cell[0]]
+        if (regionsX !== undefined){
+            const region = regionsX[cell[1]]
+            if (region !== undefined) {
+                neighborBoids = neighborBoids.concat(region)
+            }
+        }
+    })
+    return neighborBoids
+}
+
+function runBoidsSimulationWithBucket(initialBoids, visualRange, minDistance, margin, width, height, maxSpeed, weights, tMax, dt) {
+    let history = [];
+    let boids = initialBoids;
+    const cellSize = Math.max(visualRange, minDistance)
+    const record0 = cloneBoids(boids)
+    history.push({t:0, boids: record0, regions: boidsToRegions(record0, cellSize, cellSize)});
+    for (let t = 1; t <= tMax; t++) {
+        let lastStates = history.slice(-1)[0]
+        let last = lastStates.boids
+        let regions = lastStates.regions
+        for (let boid of boids) {
+            const possibleNeighbors = getPossibleNeighbors(boid, regions, cellSize, cellSize)
+            boid.accelaration = boid.accelaration.genZero()
+            flyToCenter(boid, possibleNeighbors, visualRange, weights.flyToCenter);
+            avoidOthers(boid, possibleNeighbors, minDistance, weights.avoidOthers);
+            matchVelocity(boid, possibleNeighbors, visualRange, weights.matchVelocity);
+            keepWithinBounds(boid, width, height, margin, weights.keepWithinBound);
+            boid.velocity = boid.velocity.add(boid.accelaration.scalarMul(dt))
+            limitSpeed(boid, maxSpeed);
+            boid.position = boid.position.add(boid.velocity.scalarMul(dt))
+            boid.accelaration = dt? boid.velocity.minus(last[boid.id].velocity).scalarMul(1/dt): boid.accelaration.genZero()
+        }
+        const record = cloneBoids(boids)
+        history.push({t:t, boids: record, regions: boidsToRegions(record, cellSize, cellSize)});
+    }
+    return history;
 }

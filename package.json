@@ -10,5 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "express": "*"
+  },
+  "devDependencies": {
+    "eslint": "*"
   }
 }

@@ -1,0 +1,180 @@
+diff --git a/public/simulator_control.js b/public/simulator_control.js
+index 26f9bd8..68803fb 100644
+--- a/public/simulator_control.js
++++ b/public/simulator_control.js
+@@ -1,129 +1,109 @@
++import {Vec, Vec2} from "./vector.js"
++
+ function initBoids(numBoids, width, height) {
+     let boids = [];
+-    for (var i = 0; i < numBoids; i += 1) {
++    for (let i = 0; i < numBoids; i += 1) {
+         boids[i] = {
+-            x: Math.random() * width,
+-            y: Math.random() * height,
+-            vx: Math.random() * 2 - 1,
+-            vy: Math.random() * 2 - 1,
+-        };
++            position: new Vec2(Math.random() * width, Math.random() * height),
++            velocity: new Vec2(Math.random() * 2 - 1, Math.random() * 2 - 1),
++            accelaration: Vec2.zero()
++        }
+     }
+     return boids
+ }
+ 
+-function distance(boid1, boid2) {
+-    return Math.sqrt(
+-        (boid1.x - boid2.x) * (boid1.x - boid2.x) +
+-        (boid1.y - boid2.y) * (boid1.y - boid2.y),
+-    );
+-}
+-
+-function keepWithinBounds(boid, width, height) {
+-    const margin = 200;
++function keepWithinBounds(boid, width, height, margin) {
+     const turnFactor = 1;
+-    if (boid.x < margin) {
+-        boid.vx += turnFactor;
++    if (boid.position.x < margin) {
++        boid.accelaration.x += turnFactor;
+     }
+-    if (boid.x > width - margin) {
+-        boid.vx -= turnFactor
++    if (boid.position.x > width - margin) {
++        boid.accelaration.x -= turnFactor
+     }
+-    if (boid.y < margin) {
+-        boid.vy += turnFactor;
++    if (boid.position.y < margin) {
++        boid.accelaration.y += turnFactor;
+     }
+-    if (boid.y > height - margin) {
+-        boid.vy -= turnFactor;
++    if (boid.position.y > height - margin) {
++        boid.accelaration.y -= turnFactor;
+     }
+ }
+ 
+ function flyTowardsCenter(boid, boids, visualRange) {
+     const centeringFactor = 0.005;
+-    let centerX = 0;
+-    let centerY = 0;
++    let center = boid.position.genZero()
+     let numNeighbors = 0;
+     for (let otherBoid of boids) {
+-        if (distance(boid, otherBoid) < visualRange) {
+-            centerX += otherBoid.x;
+-            centerY += otherBoid.y;
++        if (Vec.distance(boid.position, otherBoid.position) < visualRange) {
++            center = center.add(otherBoid.position)
+             numNeighbors += 1;
+         }
+     }
+     if (numNeighbors) {
+-        centerX = centerX / numNeighbors;
+-        centerY = centerY / numNeighbors;
+-        boid.vx += (centerX - boid.x) * centeringFactor;
+-        boid.vy += (centerY - boid.y) * centeringFactor;
++        center = center.scalarMul(1/numNeighbors).minus(boid.position)
++        boid.accelaration = boid.accelaration.add(center.scalarMul(centeringFactor));
+     }
+ }
+ 
+ function avoidOthers(boid, boids, minDistance) {
+     const avoidFactor = 0.05;
+-    let moveX = 0;
+-    let moveY = 0;
++    let move = boid.accelaration.genZero()
+     for (let otherBoid of boids) {
+         if (otherBoid !== boid) {
+-            if (distance(boid, otherBoid) < minDistance) {
+-                moveX += boid.x - otherBoid.x;
+-                moveY += boid.y - otherBoid.y;
++            if (Vec.distance(boid.position, otherBoid.position) < minDistance) {
++                move = move.add(boid.position.minus(otherBoid.position))
+             }
+         }
+     }
+-    boid.vx += moveX * avoidFactor;
+-    boid.vy += moveY * avoidFactor;
++    boid.accelaration = boid.accelaration.add(move.scalarMul(avoidFactor))
+ }
+ 
+ function matchVelocity(boid, boids, visualRange) {
+     const matchingFactor = 0.05;
+-    let avgDX = 0;
+-    let avgDY = 0;
++    let avgVel = boid.velocity.genZero()
+     let numNeighbors = 0;
+     for (let otherBoid of boids) {
+-        if (distance(boid, otherBoid) < visualRange) {
+-            avgDX += otherBoid.vx;
+-            avgDY += otherBoid.vy;
++        if (Vec.distance(boid.position, otherBoid.position) < visualRange) {
++            avgVel = avgVel.add(otherBoid.velocity)
+             numNeighbors += 1;
+         }
+     }
+     if (numNeighbors) {
+-        avgDX = avgDX / numNeighbors;
+-        avgDY = avgDY / numNeighbors;
+-        boid.vx += avgDX * matchingFactor;
+-        boid.vy += avgDY * matchingFactor;
++        avgVel = avgVel.scalarMul(1/numNeighbors)
++        boid.accelaration = boid.accelaration.add(avgVel.scalarMul(matchingFactor))
+     }
+ }
+ 
+ function limitSpeed(boid) {
+     const speedLimit = 15;
+-    const speed = Math.sqrt(boid.vx * boid.vx + boid.vy * boid.vy);
++    const speed = boid.velocity.norm();
+     if (speed > speedLimit) {
+-        boid.vx = (boid.vx / speed) * speedLimit;
+-        boid.vy = (boid.vy / speed) * speedLimit;
++        boid.velocity = boid.velocity.scalarMul(speedLimit/speed)
+     }
+ }
+ 
+ export const runSim = function run() {
+-    let width = 1000;
+-    let height = 1000;
+-    const numBoids = 1000;
++    let width = 1000
++    let height = 1000
++    let margin = 200
++    const numBoids = 500
++    const dt = 1
+     let history = [];
+     let boids = initBoids(numBoids, width, height);
+-    history.push({t:0, state: JSON.parse(JSON.stringify(boids))});
+-    let tMax = 1000;
+-    const start = performance.now();
++    history.push({t:0, boids: structuredClone(boids)});
++    let tMax = 500;
+     for (let t = 1; t<tMax; t++) {
+-        let last = history.slice(-1)[0].state;
++        let last = history.slice(-1)[0].boids;
+         for (let boid of boids) {
++            boid.accelaration = boid.accelaration.genZero()
+             flyTowardsCenter(boid, last, 75);
+             avoidOthers(boid, last, 20);
+             matchVelocity(boid, last, 75);
++            keepWithinBounds(boid, width, height, margin);
++            boid.velocity = boid.velocity.add(boid.accelaration.scalarMul(dt))
+             limitSpeed(boid);
+-            keepWithinBounds(boid, width, height);
+-            boid.x += boid.vx;
+-            boid.y += boid.vy;
++            boid.position = boid.position.add(boid.velocity.scalarMul(dt))
+         }
+-        history.push({t:t, state: JSON.parse(JSON.stringify(boids))});
++        history.push({t:t, boids: structuredClone(boids)});
+     }
+-    const end = performance.now();
+-    console.log(end-start);
+-    console.log(history);
+     return history;
+ }
+\ No newline at end of file

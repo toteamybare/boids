@@ -1,3 +1,5 @@
+import { Vec, Vec2} from "./vector.js"
+
 // Size of canvas. These get updated to fill the whole browser.
 let width = 1000;
 let height = 1000;
@@ -20,7 +22,25 @@ var boids = [{
         vx: 0,
         vy: 0
     }]
-}];
+}]
+
+const range = (n, start=0) => Array.from({length: n}, (_, i) => start + i)
+
+let circle = {
+    nodes: range(12).map(n => {
+        return new Vec2(Math.cos(2 * Math.PI / 12 * n) * 400 + 500, Math.sin(2 * Math.PI / 12 * n) * 400 + 500)
+    }),
+    isCCW: true,
+    isNormOut: false
+}
+
+console.log(circle)
+
+let square = {
+    nodes: [new Vec2(0, 0), new Vec2(1000, 0), new Vec2(1000, 1000), new Vec2(0, 1000)],
+    isCCW: true,
+    isNormOut: false
+}
 
 // Called initially and whenever the window resizes to update the canvas
 // size and width/height variables.
@@ -73,12 +93,29 @@ function drawBoid(ctx, boid) {
     }
 }
 
+function drawPolygon(ctx, nodes) {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "orange";
+    ctx.beginPath()
+    ctx.moveTo(nodes[0].x, nodes[0].y)
+    nodes.slice(0).forEach((node) => {
+        ctx.lineTo(node.x, node.y)
+    })
+    ctx.lineTo(nodes[0].x, nodes[0].y)
+    ctx.stroke()
+}
+
 function drawAll() {
     // Clear the canvas and redraw all the boids in their current positions
     const ctx = document.getElementById("boids").getContext("2d");
     ctx.clearRect(0, 0, width, height);
     for (let boid of boids[idx].state) {
         drawBoid(ctx, boid);
+    }
+    for (let obstacle of [
+        circle
+    ]) {
+        drawPolygon(ctx, obstacle.nodes)
     }
 
     document.getElementById("timeTxt").innerText = boids[idx].t

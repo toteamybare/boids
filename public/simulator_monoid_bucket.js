@@ -177,18 +177,88 @@ function timeLimit(tmax) {
 }
 
 export function runSim(initialBoids, option){
-    return selfFeedingSimulation(
-        SG_boidsWT(initialBoids.length,
-            option.visualRange,
-            option.minDistance,
-            option.margin,
-            option.width,
-            option.height,
-            option.maxSpeed,
-            option.weights),
-        constant(new MNum(option.dt)),
-        timeLimit(option.tMax),
-        {t: 0, boids: initialBoids},
-        MNum
-    ).states
+    if (!option.useBucket) {
+        return selfFeedingSimulation(
+            SG_boidsWT(initialBoids.length,
+                option.visualRange,
+                option.minDistance,
+                option.margin,
+                option.width,
+                option.height,
+                option.maxSpeed,
+                option.weights),
+            constant(new MNum(option.dt)),
+            timeLimit(option.tMax),
+            {t: 0, boids: initialBoids},
+            MNum
+        ).states
+    } else {
+        const cellSize = Math.max(option.visualRange, option.minDistance)
+        return selfFeedingSimulation(
+            SG_boidsWithBucket(option.visualRange,
+                option.minDistance,
+                option.margin,
+                option.width,
+                option.height,
+                option.maxSpeed,
+                option.weights),
+            constant(new MNum(option.dt)),
+            timeLimit(option.tMax),
+            {t: 0, boids: initialBoids, regions: positionedObjectsToRegions(initialBoids, cellSize)},
+            MNum
+        ).states
+    }
+}
+
+function regionHash(cellSize) {
+    return vec => vec.map(c => Math.floor(c/cellSize))
+}
+
+function positionedObjectsToRegions(objs, cellSize) {
+    const hash = regionHash(cellSize)
+    return objs.reduce((regions, obj) => {
+        let {x, y} = hash(obj.position)
+        if (regions[x] === undefined) {
+            regions[x] = {}
+        }
+        if (regions[x][y] === undefined){
+            regions[x][y] = []
+        }
+        regions[x][y].push(obj)
+        return regions
+    }, {})
+}
+
+function eightNeighbors (x, y) {
+    return [[x-1, y-1], [x, y-1], [x+1, y-1], 
+        [x-1, y], [x, y], [x+1, y], 
+        [x-1, y+1], [x, y+1], [x+1, y+1]
+    ]
+}
+
+function getPossibleNeighbors (boid, regions, cellSize) {
+    const {x, y} = regionHash(cellSize)(boid.position)
+    return eightNeighbors(x, y).map((hash) => {
+        return (regions[hash[0]] && regions[hash[0]][hash[1]])? regions[hash[0]][hash[1]]: []
+    }).flat()
+}
+
+function SG_boidsWithBucket (visualRange, minDistance, margin, width, height, maxSpeed, weights) {
+    const boidSystem = SG_boid(visualRange, minDistance, margin, width, height, maxSpeed, weights)
+    return SG_boidsAndRegions(Math.max(visualRange, minDistance), boidSystem)
+}
+
+function SG_boidsAndRegions (cellSize, S_boid) {
+    return (state, input) => {
+        const boids = state.boids.map((boid) => {
+            const neighborBoids = getPossibleNeighbors(boid, state.regions, cellSize)
+            return S_boid(boid, new MList([[input.getValue(), neighborBoids]]))
+        })
+        const regions = positionedObjectsToRegions(boids, cellSize)
+        return {
+            t: S_timeSystem(state.t, input),
+            boids: boids,
+            regions: regions
+        }
+    }
 }
