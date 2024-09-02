@@ -90,21 +90,27 @@ function runBoidsSimulation(initialBoids, visualRange, minDistance, margin, widt
     let history = [];
     let boids = initialBoids;
     history.push({t:0, boids: cloneBoids(boids)});
+
     for (let t = 1; t <= tMax; t++) {
         let last = history.slice(-1)[0].boids
+
         for (let boid of boids) {
             boid.accelaration = boid.accelaration.genZero()
-            flyToCenter(boid, last, visualRange, weights.flyToCenter);
-            avoidOthers(boid, last, minDistance, weights.avoidOthers);
-            matchVelocity(boid, last, visualRange, weights.matchVelocity);
-            keepWithinBounds(boid, width, height, margin, weights.keepWithinBound);
+
+            flyToCenter(boid, last, visualRange, weights.flyToCenter)
+            avoidOthers(boid, last, minDistance, weights.avoidOthers)
+            matchVelocity(boid, last, visualRange, weights.matchVelocity)
+            keepWithinBounds(boid, width, height, margin, weights.keepWithinBound)
+
             boid.velocity = boid.velocity.add(boid.accelaration.scalarMul(dt))
             limitSpeed(boid, maxSpeed);
             boid.position = boid.position.add(boid.velocity.scalarMul(dt))
             boid.accelaration = dt? boid.velocity.minus(last[boid.id].velocity).scalarMul(1/dt): boid.accelaration.genZero()
         }
+
         history.push({t:t, boids: cloneBoids(boids)});
     }
+
     return history;
 }
 
@@ -138,20 +144,17 @@ export const runSim = function run(initialBoids, option) {
     }
 }
 
-function regionHashForVec2(cellWidth, cellHeight) {
-    return (vec) => {
-        const xi = Math.floor(vec.x/cellWidth)
-        const yi = Math.floor(vec.y/cellHeight)
-        return [xi, yi]
-    }
+function regionHashForVec2(cellWidth, cellHeight, vec) {
+    const xi = Math.floor(vec.x/cellWidth)
+    const yi = Math.floor(vec.y/cellHeight)
+    return [xi, yi]
 }
 
 function boidsToRegions(boids, cellWidth, cellHeight) {
-    const hash = regionHashForVec2(cellWidth, cellHeight)
     let regions = {}
 
     boids.forEach((boid) => {
-        let [xi, yi] = hash(boid.position)
+        const [xi, yi] = regionHashForVec2(cellWidth, cellHeight, boid.position)
         if (regions[xi] === undefined) {
             regions[xi] = {}
         }
@@ -172,7 +175,7 @@ function eightNeighbors (x, y) {
 }
 
 function getPossibleNeighbors (boid, regions, cellWidth, cellHeight) {
-    const [xi, yi] = regionHashForVec2(cellWidth, cellHeight)(boid.position)
+    const [xi, yi] = regionHashForVec2(cellWidth, cellHeight, boid.position)
     let neighborBoids = []
     eightNeighbors(xi, yi).forEach((cell) => {
         const regionsX = regions[cell[0]]
@@ -192,22 +195,27 @@ function runBoidsSimulationWithBucket(initialBoids, visualRange, minDistance, ma
     const cellSize = Math.max(visualRange, minDistance)
     const record0 = cloneBoids(boids)
     history.push({t:0, boids: record0, regions: boidsToRegions(record0, cellSize, cellSize)});
+
     for (let t = 1; t <= tMax; t++) {
         let lastStates = history.slice(-1)[0]
         let last = lastStates.boids
         let regions = lastStates.regions
+
         for (let boid of boids) {
             const possibleNeighbors = getPossibleNeighbors(boid, regions, cellSize, cellSize)
             boid.accelaration = boid.accelaration.genZero()
+
             flyToCenter(boid, possibleNeighbors, visualRange, weights.flyToCenter);
             avoidOthers(boid, possibleNeighbors, minDistance, weights.avoidOthers);
             matchVelocity(boid, possibleNeighbors, visualRange, weights.matchVelocity);
             keepWithinBounds(boid, width, height, margin, weights.keepWithinBound);
+
             boid.velocity = boid.velocity.add(boid.accelaration.scalarMul(dt))
             limitSpeed(boid, maxSpeed);
             boid.position = boid.position.add(boid.velocity.scalarMul(dt))
             boid.accelaration = dt? boid.velocity.minus(last[boid.id].velocity).scalarMul(1/dt): boid.accelaration.genZero()
         }
+
         const record = cloneBoids(boids)
         history.push({t:t, boids: record, regions: boidsToRegions(record, cellSize, cellSize)});
     }

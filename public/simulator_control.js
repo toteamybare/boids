@@ -90,21 +90,27 @@ function runBoidsSimulation(initialBoids, visualRange, minDistance, margin, widt
     let history = [];
     let boids = initialBoids;
     history.push({t:0, boids: cloneBoids(boids)});
+
     for (let t = 1; t <= tMax; t++) {
         let last = history.slice(-1)[0].boids
+
         for (let boid of boids) {
             boid.accelaration = boid.accelaration.genZero()
-            flyToCenter(boid, last, visualRange, weights.flyToCenter);
-            avoidOthers(boid, last, minDistance, weights.avoidOthers);
-            matchVelocity(boid, last, visualRange, weights.matchVelocity);
-            keepWithinBounds(boid, width, height, margin, weights.keepWithinBound);
+
+            flyToCenter(boid, last, visualRange, weights.flyToCenter)
+            avoidOthers(boid, last, minDistance, weights.avoidOthers)
+            matchVelocity(boid, last, visualRange, weights.matchVelocity)
+            keepWithinBounds(boid, width, height, margin, weights.keepWithinBound)
+
             boid.velocity = boid.velocity.add(boid.accelaration.scalarMul(dt))
             limitSpeed(boid, maxSpeed);
             boid.position = boid.position.add(boid.velocity.scalarMul(dt))
             boid.accelaration = dt? boid.velocity.minus(last[boid.id].velocity).scalarMul(1/dt): boid.accelaration.genZero()
         }
+
         history.push({t:t, boids: cloneBoids(boids)});
     }
+
     return history;
 }
 

@@ -1,24 +1,24 @@
 import {Vec, Vec2} from "./vector.js"
 
-function S_timeSystem(current, elapsed) {
+function S_timeSystem (current, elapsed) {
     return current + elapsed.num
 }
 
-function SG_accelaratablePoint(maxSpeed = undefined) {
-    return  (spacialProperties, inputs) => {
-        let newPos = spacialProperties.position.clone()
-        let newVel = spacialProperties.velocity.clone()
-        let sumTime = 0
-        inputs.list.forEach((input) => {
-            let [time, acc] = input
-            sumTime += time
-            newVel = newVel.add(acc.scalarMul(time))
-            const speed = newVel.norm()
-            newVel = (maxSpeed != undefined && speed > maxSpeed)? newVel.scalarMul(maxSpeed/speed): newVel
-            newPos = newPos.add(newVel.scalarMul(time))
-        })
-        const newAcc = sumTime? newVel.minus(spacialProperties.velocity).scalarMul(1/sumTime): spacialProperties.accelaration.genZero()
-        return {position: newPos, velocity: newVel, accelaration: newAcc}
+function SG_accelaratablePoint (maxSpeed = undefined) {
+    return  (state, inputs) => {
+        const newStates = inputs.list.reduce((accum, input) => {
+            const [time, acc] = input
+            const tentativeVelocity = accum.velocity.add(acc.scalarMul(time))
+            const speed = tentativeVelocity.norm()
+            const velocity = (maxSpeed != undefined && speed > maxSpeed)? tentativeVelocity.scalarMul(maxSpeed/speed): tentativeVelocity
+            return {
+                velocity: velocity,
+                position: accum.position.add(velocity.scalarMul(time)),
+                sumTime: accum.sumTime + time
+            }
+        }, {position: state.position, velocity: state.velocity, sumTime: 0})
+        const newAcc = newStates.sumTime? newStates.velocity.minus(state.velocity).scalarMul(1/newStates.sumTime): state.accelaration.genZero()
+        return {position: newStates.position, velocity: newStates.velocity, accelaration: newAcc}
     }
 }
 

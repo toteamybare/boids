@@ -4,21 +4,21 @@ function S_timeSystem(current, elapsed) {
     return current + elapsed.num
 }
 
-function SG_accelaratablePoint(maxSpeed = undefined) {
-    return  (spacialProperties, inputs) => {
-        let newPos = spacialProperties.position.clone()
-        let newVel = spacialProperties.velocity.clone()
-        let sumTime = 0
-        inputs.list.forEach((input) => {
-            let [time, acc] = input
-            sumTime += time
-            newVel = newVel.add(acc.scalarMul(time))
-            const speed = newVel.norm()
-            newVel = (maxSpeed != undefined && speed > maxSpeed)? newVel.scalarMul(maxSpeed/speed): newVel
-            newPos = newPos.add(newVel.scalarMul(time))
-        })
-        const newAcc = sumTime? newVel.minus(spacialProperties.velocity).scalarMul(1/sumTime): spacialProperties.accelaration.genZero()
-        return {position: newPos, velocity: newVel, accelaration: newAcc}
+function SG_accelaratablePoint (maxSpeed = undefined) {
+    return  (state, inputs) => {
+        const newStates = inputs.list.reduce((accum, input) => {
+            const [time, acc] = input
+            const tentativeVelocity = accum.velocity.add(acc.scalarMul(time))
+            const speed = tentativeVelocity.norm()
+            const velocity = (maxSpeed != undefined && speed > maxSpeed)? tentativeVelocity.scalarMul(maxSpeed/speed): tentativeVelocity
+            return {
+                velocity: velocity,
+                position: accum.position.add(velocity.scalarMul(time)),
+                sumTime: accum.sumTime + time
+            }
+        }, {position: state.position, velocity: state.velocity, sumTime: 0})
+        const newAcc = newStates.sumTime? newStates.velocity.minus(state.velocity).scalarMul(1/newStates.sumTime): state.accelaration.genZero()
+        return {position: newStates.position, velocity: newStates.velocity, accelaration: newAcc}
     }
 }
 
@@ -233,7 +233,7 @@ function regionHash(cellSize) {
 function positionedObjectsToRegions(objs, cellSize) {
     const hash = regionHash(cellSize)
     return objs.reduce((regions, obj) => {
-        let {x, y} = hash(obj.position)
+        const {x, y} = hash(obj.position)
         if (regions[x] === undefined) {
             regions[x] = {}
         }
@@ -296,11 +296,11 @@ function visibleEdges (position, neighborNodes) {
     }, new Set())
     return [...candidates].filter(edge => {
         const isFacing = edge.norm.dot(position.minus(edge.nodes[0])) > 0
-        const isVisible = () => {return [...candidates].reduce((flag, otherEdge) => {
-            const rayIntersected = (n) => isIntersected2D(position, n, otherEdge.nodes[0], otherEdge.nodes[1])
-            return flag && ((edge.id === otherEdge.id) || !rayIntersected(edge.nodes[0]) || !rayIntersected(edge.nodes[1]))
-        }, true)}
-        return isFacing && isVisible()
+        const nodeIsVisible = (n) => [...candidates].reduce((isVisible, otherEdge) => {
+            return isVisible
+                && ((edge.id === otherEdge.id) || !isIntersected2D(position, n, otherEdge.nodes[0], otherEdge.nodes[1]))
+        }, true)
+        return isFacing && (nodeIsVisible(edge.nodes[0]) || nodeIsVisible(edge.nodes[1]))
     })
 }
 
@@ -381,7 +381,7 @@ function SG_boidWithStaticObs (visualRange, minDistance, maxSpeed, weights, regi
                 return sum.add(edge.norm)
             }, myState.accelaration.genZero())
         const accelarations = PG_boidForce(visualRange, minDistance, 0, 0, 0, {...weights, keepWithinBound: 0})(myState, inputs)
-            .map(tf => [tf[0], tf[1].add(avoidObstaclesForce)])
+            .map(tf => [tf[0], tf[1].add(avoidObstaclesForce.scalarMul(weights.avoidObstacles))])
         return {...SG_accelaratablePoint(maxSpeed)(myState, accelarations), id: myState.id}
     }
 }

@@ -1,6 +1,7 @@
 import { download } from "./util.js"
 import { runSim as runSimControl} from "./simulator_control.js"
 import { runSim as runSimControlWithBucket } from "./simulator_control_bucket.js"
+import { runSim as runSimControlWithObstacles } from "./simulator_control_obstacles.js"
 import { runSim as runSimMonoid} from "./simulator_monoid.js"
 import { runSim as runSimMonoidWithBucket } from "./simulator_monoid_bucket.js"
 import { runSim as runSimMonoidWithObstacles } from "./simulator_monoid_obstacles.js"
@@ -147,8 +148,12 @@ window.onload = () => {
         download( convertFormat(runSimControl(cloneBoids(boids), option)) )
     })
 
-    document.getElementById("simConstrolBucketBtn").addEventListener("click", () => {
+    document.getElementById("simControlBucketBtn").addEventListener("click", () => {
         download( convertFormat(runSimControlWithBucket(cloneBoids(boids), option)) )
+    })
+
+    document.getElementById("simControlObstaclesBtn").addEventListener("click", () => {
+        download( convertFormat(runSimControlWithObstacles(cloneBoids(boids), option)) )
     })
 
     document.getElementById("simMonoidBtn").addEventListener("click", () => {
@@ -192,6 +197,14 @@ window.onload = () => {
             boids = randomBoids(option.n, option.width, option.height)
         }, () => {
             runSimControlWithBucket(boids, option)
+        }, 10)
+        console.log(result)
+    })
+    document.getElementById("speedTestControlObstaclesBtn").addEventListener("click", () => {
+        const result = speedTest(()=> {
+            boids = randomBoids(option.n, option.width, option.height)
+        }, () => {
+            runSimControlWithObstacles(boids, option)
         }, 10)
         console.log(result)
     })
