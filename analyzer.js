@@ -104,7 +104,7 @@ function codeStats (codeStr, analyzeFuncs = true) {
         CC: CC,
         perD: {
             LOC: analyzeFuncs? round(avgObjs(topLevelDecs, dec => dec.stats.LOC), 1): undefined,
-            LLOC: analyzeFuncs? round(avgObjs(topLevelDecs, dec => dec.stats.LOC), 1): undefined,
+            LLOC: analyzeFuncs? round(avgObjs(topLevelDecs, dec => dec.stats.LLOC), 1): undefined,
             numTokens: analyzeFuncs? round(avgObjs(topLevelDecs, dec => dec.stats.numTokens), 1): undefined,
             numLTokens: analyzeFuncs? round(avgObjs(topLevelDecs, dec => dec.stats.numLTokens), 1): undefined,
             CC: analyzeFuncs? round(avgObjs(topLevelDecs, dec => dec.stats.CC), 1): undefined,
@@ -170,6 +170,7 @@ function showAnalysis(analysis) {
 
 const control = codeStats(fs.readFileSync("./public/simulator_control.js", "utf-8"))
 const controlB = codeStats(fs.readFileSync("./public/simulator_control_bucket.js", "utf-8"))
+const controlO = codeStats(fs.readFileSync("./public/simulator_control_obstacles.js", "utf-8"))
 const monoid = codeStats(fs.readFileSync("./public/simulator_monoid.js", "utf-8"))
 const monoidB = codeStats(fs.readFileSync("./public/simulator_monoid_bucket.js", "utf-8"))
 const monoidO = codeStats(fs.readFileSync("./public/simulator_monoid_obstacles.js", "utf-8"))
@@ -183,12 +184,14 @@ const monoidO = codeStats(fs.readFileSync("./public/simulator_monoid_obstacles.j
 // console.log(JSON.stringify(control.ast.body))
 // console.log(JSON.stringify(control.tokens))
 // console.log(control.ast)
-showAnalysis(control)
-showAnalysis(controlB)
-showAnalysis(monoid)
-showAnalysis(monoidB)
-console.log(codeDifference(control, controlB))
+// showAnalysis(monoid)
+// showAnalysis(control)
+// showAnalysis(monoidB)
+// showAnalysis(controlB)
+// showAnalysis(monoidO)
+// showAnalysis(controlO)
 console.log(codeDifference(monoid, monoidB))
+console.log(codeDifference(control, controlB))
 console.log(codeDifference(monoidB, monoidO))
-console.log(codeDifference(monoid, monoidO))
+console.log(codeDifference(controlB, controlO))
 // console.log(JSON.stringify(test2.ast.body))

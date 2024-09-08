@@ -26,15 +26,20 @@ var boids = [{
 
 const range = (n, start=0) => Array.from({length: n}, (_, i) => start + i)
 
-let circle = {
+const circle1 = {
     nodes: range(12).map(n => {
         return new Vec2(Math.cos(2 * Math.PI / 12 * n) * 400 + 500, Math.sin(2 * Math.PI / 12 * n) * 400 + 500)
     }),
     isCCW: true,
     isNormOut: false
 }
-
-console.log(circle)
+const circle2 = {
+    nodes: range(12).map(n => {
+        return new Vec2(Math.cos(2 * Math.PI / 12 * n) * 430 + 500, Math.sin(2 * Math.PI / 12 * n) * 430 + 500)
+    }),
+    isCCW: true,
+    isNormOut: false
+}
 
 let square = {
     nodes: [new Vec2(0, 0), new Vec2(1000, 0), new Vec2(1000, 1000), new Vec2(0, 1000)],
@@ -112,11 +117,12 @@ function drawAll() {
     for (let boid of boids[idx].state) {
         drawBoid(ctx, boid);
     }
-    for (let obstacle of [
-        circle
-    ]) {
-        drawPolygon(ctx, obstacle.nodes)
-    }
+    // for (let obstacle of [
+    //     circle1,
+    //     circle2
+    // ]) {
+    //     drawPolygon(ctx, obstacle.nodes)
+    // }
 
     document.getElementById("timeTxt").innerText = boids[idx].t
 }

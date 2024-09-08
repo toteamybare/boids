@@ -328,16 +328,17 @@ function cellIntersectedNodesOfEdge2D(node1, node2, cellSize) {
         .sort((a,b) => a.minus(node1).sqrNorm() - b.minus(node1).sqrNorm())
 }
 
-function networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, minNodeId, minEdgeId) {
+function networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, minNodeId, minEdgeId, minSideId) {
     const network = nodes.reduce((accum, startNode, i) => {
         const endNode = nodes[i+1] !== undefined? nodes[i+1]: nodes[0]
         const addedNodes = [startNode, ...cellIntersectedNodesOfEdge2D(startNode, endNode, cellSize)]
-        const addedEdges = addedNodes.map((node1, i) => {
-            const node2 = i !== addedNodes.length-1 ? addedNodes[i+1]: endNode
+        const addedEdges = addedNodes.map((node1, j) => {
+            const node2 = j !== addedNodes.length-1 ? addedNodes[j+1]: endNode
             const vec = node2.minus(node1)
             return {
                 nodes: [node1, node2],
-                norm: !(isCCW && isNormOut)? new Vec2(-vec.y, vec.x).normalize(): new Vec2(vec.y, -vec.x).normalize()
+                norm: !(isCCW && isNormOut)? new Vec2(-vec.y, vec.x).normalize(): new Vec2(vec.y, -vec.x).normalize(),
+                sideId: minSideId + i
             }
         })
         return {
@@ -363,12 +364,13 @@ function networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, minNodeId
 function polygonsToRegionedNodes (polygons, cellSize) {
     const network = polygons.reduce((network, polygon) => {
         const {nodes, isCCW, isNormOut} = polygon
-        const addedNetwork = networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, network.nodes.length, network.edges.length)
+        const addedNetwork = networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, network.nodes.length, network.edges.length, network.numSides)
         return {
             nodes: network.nodes.concat(addedNetwork.nodes),
-            edges: network.edges.concat(addedNetwork.edges)
+            edges: network.edges.concat(addedNetwork.edges),
+            numSides: network.numSides + nodes.length
         }
-    }, {nodes: [], edges: []})
+    }, {nodes: [], edges: [], numSides: 0})
     return positionedObjectsToRegions(network.nodes, cellSize)
 }
 
@@ -377,11 +379,13 @@ function SG_boidWithStaticObs (visualRange, minDistance, maxSpeed, weights, regi
         const neighborObstacleNodes = getPossibleNeighbors(myState, regionedObstacles, visualRange)
             .filter(node => Vec.distance(myState.position, node.position) < visualRange)
         const avoidObstaclesForce = visibleEdges(myState.position, neighborObstacleNodes)
-            .reduce((sum, edge) => {
-                return sum.add(edge.norm)
-            }, myState.accelaration.genZero())
+            .reduce((accum, edge) => {
+                if (!accum.sides.includes(edge.sideId)) {
+                    return { sides: accum.sides.concat([edge.sideId]), force: accum.force.add(edge.norm) }
+                } else return accum
+            }, {sides: [], force: myState.accelaration.genZero()})
         const accelarations = PG_boidForce(visualRange, minDistance, 0, 0, 0, {...weights, keepWithinBound: 0})(myState, inputs)
-            .map(tf => [tf[0], tf[1].add(avoidObstaclesForce.scalarMul(weights.avoidObstacles))])
+            .map(tf => [tf[0], tf[1].add(avoidObstaclesForce.force.scalarMul(weights.avoidObstacles))])
         return {...SG_accelaratablePoint(maxSpeed)(myState, accelarations), id: myState.id}
     }
 }

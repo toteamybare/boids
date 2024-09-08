@@ -115,7 +115,7 @@ window.onload = () => {
             avoidOthers: 0.05,
             matchVelocity: 0.1,
             keepWithinBound: 1,
-            avoidObstacles: 2
+            avoidObstacles: 5
         },
         useBucket: true,
         obstacles: [
@@ -135,6 +135,13 @@ window.onload = () => {
                 }),
                 isCCW: true,
                 isNormOut: false
+            },
+            {
+                nodes: range(12).map(n => {
+                    return new Vec2(Math.cos(2 * Math.PI / 12 * n) * 430 + 500, Math.sin(2 * Math.PI / 12 * n) * 430 + 500)
+                }),
+                isCCW: true,
+                isNormOut: true
             }
         ]
     }
@@ -234,42 +241,6 @@ window.onload = () => {
     })
 
     document.getElementById("test").addEventListener("click", () => {
-        // const edges = []
-        // const nodes = []
-
-        // function edgeNorm(n1, n2, isClockWise) {
-        //     const edgeVec = n2.minus(n1)
-        //     return isClockWise? new Vec2(edgeVec.y, - edgeVec.x).normalize(): new Vec2(- edgeVec.y, edgeVec.x).normalize()
-        // }
-
-        // function addEdge(n1, n2, normIsClockWise) {
-        //     const edgeId = edges.length
-        //     const node1Id = nodes.length
-        //     const node2Id = node1Id + 1
-        //     const edge = {
-        //         nodes: [
-        //             n1, n2
-        //         ],
-        //         id: edgeId,
-        //         norm: edgeNorm(n1, n2, normIsClockWise)
-        //     }
-        //     const node1 = {
-        //         position: n1,
-        //         edges: [edge],
-        //         id: node1Id
-        //     }
-        //     const node2 = {
-        //         position: n1,
-        //         edges: [edge],
-        //         id: node2Id
-        //     }
-        //     nodes.push(node1)
-        //     nodes.push(node2)
-        //     edges.push(edge)
-        // }
-
-        // addEdge(new Vec2(0, 0), new Vec2(1, 2), true)
-        // addEdge(new Vec2(-1, 2), new Vec2(0, 3))
 
         const regionedObstacles = polygonsToRegionedNodes([
             {

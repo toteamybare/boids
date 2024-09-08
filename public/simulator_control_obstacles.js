@@ -201,6 +201,7 @@ function getPossibleNeighbors (boid, regions, cellWidth, cellHeight) {
     })
     return neighborBoids
 }
+
 function runBoidsSimulationWithBucket(initialBoids, visualRange, minDistance, margin, width, height, maxSpeed, weights, tMax, dt) {
     let history = [];
     let boids = initialBoids;
@@ -217,11 +218,11 @@ function runBoidsSimulationWithBucket(initialBoids, visualRange, minDistance, ma
             const possibleNeighbors = getPossibleNeighbors(boid, regions, cellSize, cellSize)
             boid.accelaration = boid.accelaration.genZero()
 
-            flyToCenter(boid, possibleNeighbors, visualRange, weights.flyToCenter)
-            avoidOthers(boid, possibleNeighbors, minDistance, weights.avoidOthers)
-            matchVelocity(boid, possibleNeighbors, visualRange, weights.matchVelocity)
-            keepWithinBounds(boid, width, height, margin, weights.keepWithinBound)
-            
+            flyToCenter(boid, possibleNeighbors, visualRange, weights.flyToCenter);
+            avoidOthers(boid, possibleNeighbors, minDistance, weights.avoidOthers);
+            matchVelocity(boid, possibleNeighbors, visualRange, weights.matchVelocity);
+            keepWithinBounds(boid, width, height, margin, weights.keepWithinBound);
+
             boid.velocity = boid.velocity.add(boid.accelaration.scalarMul(dt))
             limitSpeed(boid, maxSpeed);
             boid.position = boid.position.add(boid.velocity.scalarMul(dt))
@@ -258,9 +259,11 @@ function avoidObstacles(boid, regionedObstacles, visualRange, factor) {
     }
 
     let force = boid.accelaration.genZero()
+    let visibleSides = []
     for (let edge of neighborObstacleEdges) {
         const isFacing = edge.norm.dot(boid.position.minus(edge.nodes[0])) > 0
-        if (isFacing) {
+        const isAlreadyViewed = visibleSides.includes(edge.sideId)
+        if (isFacing && !isAlreadyViewed) {
             const node0 = edge.nodes[0]
             const node1 = edge.nodes[1]
             let n0IsVisible = true
@@ -273,6 +276,7 @@ function avoidObstacles(boid, regionedObstacles, visualRange, factor) {
             }
             if (n0IsVisible && n1IsVisible) {
                 force = force.add(edge.norm)
+                visibleSides.push(edge.sideId)
             }
         }
     }
@@ -315,7 +319,7 @@ function cellIntersectedNodesOfEdge2D(node1, node2, cellSize) {
     return intersections.sort((a, b) => a.minus(node1).sqrNorm() - b.minus(node1).sqrNorm())
 }
 
-function networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, minNodeId, minEdgeId) {
+function networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, minNodeId, minEdgeId, minSideId) {
     let network = {
         nodes: [],
         edges: []
@@ -344,7 +348,8 @@ function networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, minNodeId
             const vec = vec2.minus(vec1)
             network.edges.push({
                 nodes: [vec1, vec2],
-                norm: !(isCCW && isNormOut)? new Vec2(-vec.y, vec.x).normalize(): new Vec2(vec.y, -vec.x).normalize()
+                norm: !(isCCW && isNormOut)? new Vec2(-vec.y, vec.x).normalize(): new Vec2(vec.y, -vec.x).normalize(),
+                sideId: minSideId + i
             })
             network.nodes.push({
                 position: vec1
@@ -370,11 +375,13 @@ function networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, minNodeId
 
 function polygonsToRegionedNodes (polygons, cellSize) {
     let network = {nodes: [], edges: []}
+    let numSides = 0
     for (let polygon of polygons) {
         const {nodes, isCCW, isNormOut} = polygon
-        const addedNetwork = networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, network.nodes.length, network.edges.length)
+        const addedNetwork = networkOfPolygonObstacle2D(nodes, isCCW, isNormOut, cellSize, network.nodes.length, network.edges.length, numSides)
         network.nodes = network.nodes.concat(addedNetwork.nodes)
         network.edges = network.edges.concat(addedNetwork.edges)
+        numSides = numSides + nodes.length
     }
     return boidsToRegions(network.nodes, cellSize, cellSize)
 }
