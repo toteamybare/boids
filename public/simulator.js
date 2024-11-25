@@ -33,6 +33,26 @@ function randomBoids(numBoids, width, height) {
     }})
 }
 
+function positionInsideCircle(cx, cy, radius) {
+    const center = new Vec2(cx, cy)
+    while (true) {
+        const position = new Vec2(Math.random() * radius * 2 - radius + cx, Math.random() * radius * 2 - radius + cy)
+        if (Vec2.distance(position, center) < radius) {
+            return position;
+        }
+    }
+}
+
+function randomBoidsInsideCircle(numBoids, cx, cy, radius) {
+    return Array(numBoids).fill(undefined).map((_, i) => {
+        return {
+            position: positionInsideCircle(cx, cy, radius),
+            velocity: new Vec2(Math.random() * 2 - 1, Math.random() * 2 - 1),
+            accelaration: Vec2.zero(),
+            id: i
+    }})
+}
+
 function hasSamePVA(a, b) {
     function toVec2(obj) {
         return new Vec2(obj.x, obj.y)
@@ -148,6 +168,11 @@ window.onload = () => {
 
     document.getElementById("generateBoidsBtn").addEventListener("click", () => {
         boids = randomBoids(option.n, option.width, option.height)
+        console.log(boids)
+    })
+    
+    document.getElementById("generateBoidsWithinCircleBtn").addEventListener("click", () => {
+        boids = randomBoidsInsideCircle(option.n, 500, 500, 400*Math.cos(15/180*Math.PI))
         console.log(boids)
     })
 

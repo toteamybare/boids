@@ -117,12 +117,12 @@ function drawAll() {
     for (let boid of boids[idx].state) {
         drawBoid(ctx, boid);
     }
-    // for (let obstacle of [
-    //     circle1,
-    //     circle2
-    // ]) {
-    //     drawPolygon(ctx, obstacle.nodes)
-    // }
+    for (let obstacle of [
+        circle1,
+        circle2
+    ]) {
+        drawPolygon(ctx, obstacle.nodes)
+    }
 
     document.getElementById("timeTxt").innerText = boids[idx].t
 }
